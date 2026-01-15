@@ -455,21 +455,37 @@ class FolkClient:
         name: str,
         trigger_time: str,
         visibility: str = "public",
-        recurrence_rule: str | None = None,
         assigned_user_ids: list[str] | None = None,
     ) -> Reminder:
-        """Create a new reminder."""
+        """Create a new reminder.
+
+        Args:
+            entity_id: The entity ID to attach the reminder to
+            name: Reminder name/description
+            trigger_time: ISO 8601 datetime (e.g., "2026-01-15T09:00:00Z")
+            visibility: "public" or "private"
+            assigned_user_ids: Optional list of user IDs to assign
+        """
+        # Convert ISO datetime to iCalendar RRULE format
+        # Folk API requires recurrenceRule in iCalendar format
+        from datetime import datetime
+
+        # Parse the ISO datetime
+        dt = datetime.fromisoformat(trigger_time.replace("Z", "+00:00"))
+        # Format as iCalendar DTSTART (use UTC)
+        dtstart = dt.strftime("%Y%m%dT%H%M%S")
+        # Create a one-time reminder (COUNT=1)
+        recurrence_rule = f"DTSTART;TZID=UTC:{dtstart}\nRRULE:FREQ=DAILY;COUNT=1"
+
         body: dict[str, Any] = {
             "entity": {"id": entity_id},
             "name": name,
-            "triggerTime": trigger_time,
+            "recurrenceRule": recurrence_rule,
             "visibility": visibility,
         }
 
-        if recurrence_rule:
-            body["recurrenceRule"] = recurrence_rule
         if assigned_user_ids:
-            body["assignedUserIds"] = assigned_user_ids
+            body["assignedUsers"] = [{"id": uid} for uid in assigned_user_ids]
 
         data = await self._request("POST", "/reminders", json_data=body)
         response = ReminderResponse(**data)
