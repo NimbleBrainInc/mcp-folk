@@ -110,6 +110,39 @@ class FolkClient:
             if params:
                 kwargs["params"] = params
 
+            # For DELETE requests without body, use a separate session request without
+            # Content-Type to avoid "Body cannot be empty when content-type is set" error
+            if method == "DELETE" and json_data is None:
+                # Create headers without Content-Type for DELETE
+                delete_headers = {
+                    "User-Agent": "mcp-server-folk/0.1.0",
+                    "Accept": "application/json",
+                    "Authorization": f"Bearer {self.api_key}",
+                }
+                async with aiohttp.ClientSession().request(
+                    method, url, headers=delete_headers, **kwargs
+                ) as response:
+                    # DELETE might return 204 No Content with empty body
+                    if response.status == 204:
+                        return {}
+                    result = await response.json()
+
+                    if response.status >= 400:
+                        error_msg = "Unknown error"
+                        if isinstance(result, dict):
+                            if "error" in result:
+                                error_obj = result["error"]
+                                if isinstance(error_obj, dict):
+                                    error_msg = error_obj.get("message", str(error_obj))
+                                else:
+                                    error_msg = str(error_obj)
+                            elif "message" in result:
+                                error_msg = result["message"]
+
+                        raise FolkAPIError(response.status, error_msg, result)
+
+                    return result  # type: ignore[no-any-return]
+
             async with self._session.request(method, url, **kwargs) as response:
                 result = await response.json()
 
@@ -465,19 +498,20 @@ class FolkClient:
             name: Reminder name/description
             trigger_time: ISO 8601 datetime (e.g., "2026-01-15T09:00:00Z")
             visibility: "public" or "private"
-            assigned_user_ids: Optional list of user IDs to assign
+            assigned_user_ids: Optional list of user IDs to assign (required for public)
         """
-        # Convert ISO datetime to iCalendar RRULE format
-        # Folk API requires recurrenceRule in iCalendar format
         from datetime import datetime
 
         # Parse the ISO datetime
         dt = datetime.fromisoformat(trigger_time.replace("Z", "+00:00"))
-        # Convert to UTC and format as iCalendar DTSTART with Z suffix
+        # Convert to UTC
         dt_utc = dt.astimezone(UTC)
-        dtstart = dt_utc.strftime("%Y%m%dT%H%M%SZ")
-        # Create a one-time reminder (COUNT=1)
-        recurrence_rule = f"DTSTART:{dtstart}\nRRULE:FREQ=DAILY;COUNT=1"
+
+        # Folk API requires iCalendar format with TZID (not Z suffix)
+        # Format: DTSTART;TZID=UTC:20260115T090000
+        dtstart = dt_utc.strftime("%Y%m%dT%H%M%S")
+        # One-time reminder uses COUNT=1 without FREQ
+        recurrence_rule = f"DTSTART;TZID=UTC:{dtstart}\nRRULE:COUNT=1"
 
         body: dict[str, Any] = {
             "entity": {"id": entity_id},
@@ -486,8 +520,13 @@ class FolkClient:
             "visibility": visibility,
         }
 
+        # assignedUsers is required for public reminders
         if assigned_user_ids:
             body["assignedUsers"] = [{"id": uid} for uid in assigned_user_ids]
+        elif visibility == "public":
+            # For public reminders without explicit assignees, get current user
+            current_user = await self.get_current_user()
+            body["assignedUsers"] = [{"id": current_user.id}]
 
         data = await self._request("POST", "/reminders", json_data=body)
         response = ReminderResponse(**data)
