@@ -201,3 +201,7 @@ temp/
 *.crt
 credentials.json
 service-account.json
+
+# MCPB build artifacts
+*.mcpb
+deps/
