@@ -362,7 +362,254 @@ async def browse_companies(
 
 
 # =============================================================================
-# TIER 4: Action Tools
+# TIER 4: Group Tools
+# Query groups and filter contacts within groups
+# =============================================================================
+
+
+@mcp.tool()
+async def list_groups(
+    ctx: Context | None = None,
+) -> dict[str, Any]:
+    """List all groups in the Folk workspace.
+
+    Use this to discover what groups exist when you don't know the group name.
+    For querying people/companies in a known group, use find_people_in_group directly.
+
+    Returns:
+        {
+            "groups": [{"id": "grp_xxx", "name": "Demos Management"}, ...],
+            "total": number of groups
+        }
+    """
+    client = get_client(ctx)
+    try:
+        groups = await client.list_groups(limit=100)
+
+        return {
+            "groups": [{"id": g.id, "name": g.name} for g in groups],
+            "total": len(groups),
+        }
+    except FolkAPIError as e:
+        if ctx:
+            ctx.error(f"API error: {e.message}")
+        raise
+
+
+@mcp.tool()
+async def find_people_in_group(
+    group_name: str,
+    status: str | None = None,
+    custom_field: str | None = None,
+    custom_value: str | None = None,
+    limit: int = 20,
+    ctx: Context | None = None,
+) -> dict[str, Any]:
+    """Find people in a group, optionally filtered by custom fields like Status.
+
+    This is the primary tool for querying contacts within Folk groups/views.
+    Custom fields like "Status" are group-specific in Folk.
+
+    Args:
+        group_name: Name of the group (e.g., "Demos Management", "Clients", "Leads")
+        status: Filter by "Status" custom field value (e.g., "Follow up 1", "Active", "Won")
+        custom_field: Name of a different custom field to filter by
+        custom_value: Value to match for the custom_field
+        limit: Maximum results to return (default 20, max 50)
+
+    Returns:
+        {
+            "found": true/false,
+            "people": [{"id": "...", "name": "...", "email": "...", "status": "...", "custom_fields": {...}}],
+            "total": number of matches,
+            "group_name": "Demos Management"
+        }
+
+    Examples:
+        - Find leads needing follow-up: find_people_in_group("Demos Management", status="Follow up 1")
+        - Find active clients: find_people_in_group("Clients", status="Active")
+        - Filter by custom field: find_people_in_group("Leads", custom_field="Priority", custom_value="High")
+    """
+    client = get_client(ctx)
+    try:
+        limit = min(max(limit, 1), 50)
+
+        # Resolve group name to ID
+        groups = await client.list_groups(limit=100)
+        group = next(
+            (g for g in groups if g.name.lower() == group_name.lower()),
+            None,
+        )
+
+        if not group:
+            # Try fuzzy match
+            group = next(
+                (g for g in groups if group_name.lower() in g.name.lower()),
+                None,
+            )
+
+        if not group:
+            available = [g.name for g in groups[:10]]
+            return {
+                "found": False,
+                "error": f"Group '{group_name}' not found",
+                "available_groups": available,
+                "hint": "Check the group name or use list_groups to see all available groups",
+            }
+
+        group_id = group.id
+
+        # Build filters
+        filters: dict[str, Any] = {
+            "groups": {"in": {"id": group_id}},
+        }
+
+        # Add status filter if provided (Status uses 'in' operator for select fields)
+        if status:
+            filters[f"customFieldValues.{group_id}.Status"] = {"in": status}
+
+        # Add custom field filter if provided (use 'in' for select fields, 'like' for text)
+        if custom_field and custom_value:
+            filters[f"customFieldValues.{group_id}.{custom_field}"] = {"in": custom_value}
+
+        people = await client.list_people(limit=limit, filters=filters)
+
+        results = []
+        for person in people:
+            full_name_parts = []
+            if person.first_name:
+                full_name_parts.append(person.first_name)
+            if person.last_name:
+                full_name_parts.append(person.last_name)
+            full_name = " ".join(full_name_parts) or person.full_name or "Unknown"
+
+            # Extract custom fields for this group
+            group_custom_fields = person.custom_field_values.get(group_id, {})
+
+            results.append(
+                {
+                    "id": person.id,
+                    "name": full_name,
+                    "email": person.emails[0] if person.emails else None,
+                    "job_title": person.job_title,
+                    "status": group_custom_fields.get("Status"),
+                    "custom_fields": group_custom_fields,
+                }
+            )
+
+        return {
+            "found": len(results) > 0,
+            "people": results,
+            "total": len(results),
+            "group_name": group.name,
+        }
+    except FolkAPIError as e:
+        if ctx:
+            ctx.error(f"API error: {e.message}")
+        raise
+
+
+@mcp.tool()
+async def find_companies_in_group(
+    group_name: str,
+    status: str | None = None,
+    custom_field: str | None = None,
+    custom_value: str | None = None,
+    limit: int = 20,
+    ctx: Context | None = None,
+) -> dict[str, Any]:
+    """Find companies in a group, optionally filtered by custom fields like Status.
+
+    This is the primary tool for querying companies within Folk groups/views.
+
+    Args:
+        group_name: Name of the group (e.g., "Target Accounts", "Partners")
+        status: Filter by "Status" custom field value
+        custom_field: Name of a different custom field to filter by
+        custom_value: Value to match for the custom_field
+        limit: Maximum results to return (default 20, max 50)
+
+    Returns:
+        {
+            "found": true/false,
+            "companies": [{"id": "...", "name": "...", "status": "...", "custom_fields": {...}}],
+            "total": number of matches,
+            "group_name": "..."
+        }
+    """
+    client = get_client(ctx)
+    try:
+        limit = min(max(limit, 1), 50)
+
+        # Resolve group name to ID
+        groups = await client.list_groups(limit=100)
+        group = next(
+            (g for g in groups if g.name.lower() == group_name.lower()),
+            None,
+        )
+
+        if not group:
+            # Try fuzzy match
+            group = next(
+                (g for g in groups if group_name.lower() in g.name.lower()),
+                None,
+            )
+
+        if not group:
+            available = [g.name for g in groups[:10]]
+            return {
+                "found": False,
+                "error": f"Group '{group_name}' not found",
+                "available_groups": available,
+                "hint": "Check the group name or use list_groups to see all available groups",
+            }
+
+        group_id = group.id
+
+        # Build filters
+        filters: dict[str, Any] = {
+            "groups": {"in": {"id": group_id}},
+        }
+
+        # Add status filter if provided (Status uses 'in' operator for select fields)
+        if status:
+            filters[f"customFieldValues.{group_id}.Status"] = {"in": status}
+
+        # Add custom field filter if provided (use 'in' for select fields, 'like' for text)
+        if custom_field and custom_value:
+            filters[f"customFieldValues.{group_id}.{custom_field}"] = {"in": custom_value}
+
+        companies = await client.list_companies(limit=limit, filters=filters)
+
+        results = []
+        for company in companies:
+            # Extract custom fields for this group
+            group_custom_fields = company.custom_field_values.get(group_id, {})
+
+            results.append(
+                {
+                    "id": company.id,
+                    "name": company.name,
+                    "industry": company.industry,
+                    "status": group_custom_fields.get("Status"),
+                    "custom_fields": group_custom_fields,
+                }
+            )
+
+        return {
+            "found": len(results) > 0,
+            "companies": results,
+            "total": len(results),
+            "group_name": group.name,
+        }
+    except FolkAPIError as e:
+        if ctx:
+            ctx.error(f"API error: {e.message}")
+        raise
+
+
+# =============================================================================
+# TIER 5: Action Tools
 # Create, update, and manage CRM data
 # =============================================================================
 
@@ -615,7 +862,7 @@ async def delete_company(
 
 
 # =============================================================================
-# TIER 5: Notes & Reminders
+# TIER 6: Notes & Reminders
 # Attach context to contacts
 # =============================================================================
 

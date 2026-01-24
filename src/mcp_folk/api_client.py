@@ -167,6 +167,26 @@ class FolkClient:
 
     # People endpoints
 
+    def _serialize_filters(self, filters: dict[str, Any], prefix: str = "filter") -> dict[str, str]:
+        """Serialize nested filter dicts to bracket notation for query params.
+
+        Converts: {"groups": {"in": {"id": "grp_xxx"}}}
+        To: {"filter[groups][in][id]": "grp_xxx"}
+        """
+        result: dict[str, str] = {}
+
+        def flatten(obj: Any, path: str) -> None:
+            if isinstance(obj, dict):
+                for key, value in obj.items():
+                    flatten(value, f"{path}[{key}]")
+            else:
+                result[path] = str(obj)
+
+        for key, value in filters.items():
+            flatten(value, f"{prefix}[{key}]")
+
+        return result
+
     async def list_people(
         self,
         limit: int = 20,
@@ -183,12 +203,7 @@ class FolkClient:
 
         # Add filter params (serialize nested dicts to bracket notation)
         if filters:
-            for key, value in filters.items():
-                if isinstance(value, dict):
-                    for op, op_value in value.items():
-                        params[f"filter[{key}][{op}]"] = op_value
-                else:
-                    params[f"filter[{key}]"] = value
+            params.update(self._serialize_filters(filters))
 
         data = await self._request("GET", "/people", params=params)
         response = PersonListResponse(**data)
@@ -300,12 +315,7 @@ class FolkClient:
 
         # Add filter params (serialize nested dicts to bracket notation)
         if filters:
-            for key, value in filters.items():
-                if isinstance(value, dict):
-                    for op, op_value in value.items():
-                        params[f"filter[{key}][{op}]"] = op_value
-                else:
-                    params[f"filter[{key}]"] = value
+            params.update(self._serialize_filters(filters))
 
         data = await self._request("GET", "/companies", params=params)
         response = CompanyListResponse(**data)
@@ -630,12 +640,7 @@ class FolkClient:
 
         # Add filter params (serialize nested dicts to bracket notation)
         if filters:
-            for key, value in filters.items():
-                if isinstance(value, dict):
-                    for op, op_value in value.items():
-                        params[f"filter[{key}][{op}]"] = op_value
-                else:
-                    params[f"filter[{key}]"] = value
+            params.update(self._serialize_filters(filters))
 
         data = await self._request("GET", f"/groups/{group_id}/{object_type}", params=params)
         response = DealListResponse(**data)

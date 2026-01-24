@@ -74,6 +74,14 @@ claude mcp add folk -- mpak run --local /path/to/mcp-folk/mcp-folk-0.1.0-darwin-
 | `browse_people(page, per_page)` | Paginated list of all people |
 | `browse_companies(page, per_page)` | Paginated list of all companies |
 
+### Groups & Filtering
+
+| Tool | Purpose |
+|------|---------|
+| `list_groups()` | List all groups in the workspace |
+| `find_people_in_group(group_name, status)` | Find people in a group, optionally filtered by Status |
+| `find_companies_in_group(group_name, status)` | Find companies in a group, optionally filtered by Status |
+
 ### Actions
 
 | Tool | Purpose |
@@ -126,6 +134,12 @@ claude mcp add folk -- mpak run --local /path/to/mcp-folk/mcp-folk-0.1.0-darwin-
 **Browse contacts**
 - "Show me my recent contacts"
 - "List all companies in my CRM"
+
+**Query groups and pipelines**
+- "Show me leads in 'Demos Management' with status 'Follow up 1'"
+- "List all people in my Investors group"
+- "Find active clients in my Customers group"
+- "What groups do I have in Folk?"
 
 ## Example Flow
 
