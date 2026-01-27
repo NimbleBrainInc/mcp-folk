@@ -208,7 +208,7 @@ class TestGroupIntegration:
                             # Now try to filter by that status
                             status_filter = {
                                 "groups": {"in": {"id": group.id}},
-                                f"customFieldValues.{group.id}.Status": {"eq": status_value},
+                                f"customFieldValues.{group.id}.Status": {"in": status_value},
                             }
                             filtered_people = await client.list_people(
                                 limit=10, filters=status_filter

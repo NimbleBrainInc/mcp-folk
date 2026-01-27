@@ -9,6 +9,7 @@ This server provides intent-based tools optimized for AI assistants:
 
 import logging
 import os
+import re
 import sys
 from typing import Any
 
@@ -17,6 +18,22 @@ from starlette.requests import Request
 from starlette.responses import JSONResponse
 
 from mcp_folk.api_client import FolkAPIError, FolkClient
+
+# Folk ID format: prefix + UUID v4 (e.g., "per_xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx")
+_FOLK_ID_RE = re.compile(r"^[a-z]{2,4}_[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$")
+
+
+def _validate_folk_id(value: str, entity: str = "entity") -> None:
+    """Validate that a string matches the Folk ID format (prefix_uuid).
+
+    Raises McpError with an actionable message if the ID is invalid.
+    """
+    if not _FOLK_ID_RE.match(value):
+        raise ValueError(
+            f"Invalid {entity} ID '{value}'. "
+            f"Folk IDs are prefix + UUID v4 format (e.g., 'per_xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx'). "
+            f"Call find_person or find_company first to get the correct ID from the search results."
+        )
 
 # Configure logging to stderr (stdout is for MCP JSON-RPC)
 logging.basicConfig(
@@ -180,14 +197,15 @@ async def get_person_details(
     """Get full details for a person by their ID.
 
     IMPORTANT: You must call find_person first to get the person_id.
-    The person_id must be a valid Folk ID from find_person results.
+    Folk IDs are prefix + UUID v4 format (e.g., "per_xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx").
 
     Args:
-        person_id: The person's Folk ID from find_person (NOT their name)
+        person_id: Exact Folk ID from find_person results (prefix + UUID format)
 
     Returns:
         Full person details including all fields, notes count, etc.
     """
+    _validate_folk_id(person_id, "person")
     client = get_client(ctx)
     try:
         person = await client.get_person(person_id)
@@ -216,14 +234,15 @@ async def get_company_details(
     """Get full details for a company by its ID.
 
     IMPORTANT: You must call find_company first to get the company_id.
-    The company_id must be a valid Folk ID from find_company results.
+    Folk IDs are prefix + UUID v4 format (e.g., "com_xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx").
 
     Args:
-        company_id: The company's Folk ID from find_company (NOT the company name)
+        company_id: Exact Folk ID from find_company results (prefix + UUID format)
 
     Returns:
         Full company details including all fields.
     """
+    _validate_folk_id(company_id, "company")
     client = get_client(ctx)
     try:
         company = await client.get_company(company_id)
@@ -718,10 +737,10 @@ async def update_person(
     """Update an existing person's information.
 
     IMPORTANT: You must call find_person first to get the person_id.
-    The person_id must be a valid Folk ID from find_person results.
+    Folk IDs are prefix + UUID v4 format (e.g., "per_xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx").
 
     Args:
-        person_id: The person's Folk ID from find_person (NOT their name)
+        person_id: Exact Folk ID from find_person results (prefix + UUID format)
         first_name: New first name (or None to keep existing)
         last_name: New last name
         email: New email (replaces existing)
@@ -731,6 +750,7 @@ async def update_person(
     Returns:
         {"id": "...", "name": "...", "updated": true}
     """
+    _validate_folk_id(person_id, "person")
     client = get_client(ctx)
     try:
         emails = [email] if email else None
@@ -774,10 +794,10 @@ async def update_company(
     """Update an existing company's information.
 
     IMPORTANT: You must call find_company first to get the company_id.
-    The company_id must be a valid Folk ID from find_company results.
+    Folk IDs are prefix + UUID v4 format (e.g., "com_xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx").
 
     Args:
-        company_id: The company's Folk ID from find_company (NOT the company name)
+        company_id: Exact Folk ID from find_company results (prefix + UUID format)
         name: New company name
         industry: New industry
         website: New website URL
@@ -785,6 +805,7 @@ async def update_company(
     Returns:
         {"id": "...", "name": "...", "updated": true}
     """
+    _validate_folk_id(company_id, "company")
     client = get_client(ctx)
     try:
         urls = [website] if website else None
@@ -812,18 +833,18 @@ async def delete_person(
     person_id: str,
     ctx: Context | None = None,
 ) -> dict[str, Any]:
-    """Delete a person from the CRM.
+    """Delete a person from the CRM. This action cannot be undone.
 
     IMPORTANT: You must call find_person first to get the person_id.
-    The person_id must be a valid Folk ID from find_person results.
-    This action cannot be undone.
+    Folk IDs are prefix + UUID v4 format (e.g., "per_xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx").
 
     Args:
-        person_id: The person's Folk ID from find_person (NOT their name)
+        person_id: Exact Folk ID from find_person results (prefix + UUID format)
 
     Returns:
         {"id": "...", "deleted": true}
     """
+    _validate_folk_id(person_id, "person")
     client = get_client(ctx)
     try:
         await client.delete_person(person_id)
@@ -839,18 +860,18 @@ async def delete_company(
     company_id: str,
     ctx: Context | None = None,
 ) -> dict[str, Any]:
-    """Delete a company from the CRM.
+    """Delete a company from the CRM. This action cannot be undone.
 
     IMPORTANT: You must call find_company first to get the company_id.
-    The company_id must be a valid Folk ID from find_company results.
-    This action cannot be undone.
+    Folk IDs are prefix + UUID v4 format (e.g., "com_xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx").
 
     Args:
-        company_id: The company's Folk ID from find_company (NOT the company name)
+        company_id: Exact Folk ID from find_company results (prefix + UUID format)
 
     Returns:
         {"id": "...", "deleted": true}
     """
+    _validate_folk_id(company_id, "company")
     client = get_client(ctx)
     try:
         await client.delete_company(company_id)
@@ -876,16 +897,16 @@ async def add_note(
     """Add a note to a person.
 
     IMPORTANT: You must call find_person first to get the person_id.
-    The person_id must be a valid Folk ID from find_person results.
-    Do NOT use names or made-up IDs.
+    Folk IDs are prefix + UUID v4 format (e.g., "per_xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx").
 
     Args:
-        person_id: The person's Folk ID from find_person (NOT their name)
+        person_id: Exact Folk ID from find_person results (prefix + UUID format)
         content: Note content
 
     Returns:
         {"id": "...", "added": true}
     """
+    _validate_folk_id(person_id, "person")
     client = get_client(ctx)
     try:
         note = await client.create_note(
@@ -911,12 +932,13 @@ async def get_notes(
     IMPORTANT: You must call find_person first to get the person_id.
 
     Args:
-        person_id: The person's Folk ID from find_person (NOT their name)
+        person_id: Exact Folk ID from find_person results (prefix + UUID format)
         limit: Maximum notes to return (default 10)
 
     Returns:
         {"notes": [{"id": "...", "content": "...", "created_at": "..."}]}
     """
+    _validate_folk_id(person_id, "person")
     client = get_client(ctx)
     try:
         notes = await client.list_notes(limit=limit, entity_id=person_id)
@@ -946,17 +968,17 @@ async def set_reminder(
     """Set a reminder for a person.
 
     IMPORTANT: You must call find_person first to get the person_id.
-    The person_id must be a valid Folk ID from find_person results (e.g., "per_abc123").
-    Do NOT use names, slugs, or made-up IDs - they will fail with "Invalid input".
+    Folk IDs are prefix + UUID v4 format (e.g., "per_xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx").
 
     Args:
-        person_id: The person's Folk ID from find_person (NOT their name)
+        person_id: Exact Folk ID from find_person results (prefix + UUID format)
         reminder: What to be reminded about
-        when: When to trigger (ISO 8601 datetime, e.g., "2024-12-25T09:00:00Z")
+        when: When to trigger (ISO 8601 datetime, e.g., "2026-01-28T09:00:00Z")
 
     Returns:
         {"id": "...", "set": true}
     """
+    _validate_folk_id(person_id, "person")
     client = get_client(ctx)
     try:
         result = await client.create_reminder(
@@ -982,16 +1004,17 @@ async def log_interaction(
     """Log an interaction with a person.
 
     IMPORTANT: You must call find_person first to get the person_id.
-    The person_id must be a valid Folk ID from find_person results.
+    Folk IDs are prefix + UUID v4 format (e.g., "per_xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx").
 
     Args:
-        person_id: The person's Folk ID from find_person (NOT their name)
+        person_id: Exact Folk ID from find_person results (prefix + UUID format)
         interaction_type: Type of interaction (e.g., "email", "meeting", "call")
         when: When it occurred (ISO 8601 datetime)
 
     Returns:
         {"id": "...", "logged": true}
     """
+    _validate_folk_id(person_id, "person")
     client = get_client(ctx)
     try:
         result = await client.create_interaction(
