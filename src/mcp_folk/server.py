@@ -20,7 +20,9 @@ from starlette.responses import JSONResponse
 from mcp_folk.api_client import FolkAPIError, FolkClient
 
 # Folk ID format: prefix + UUID v4 (e.g., "per_xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx")
-_FOLK_ID_RE = re.compile(r"^[a-z]{2,4}_[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$")
+_FOLK_ID_RE = re.compile(
+    r"^[a-z]{2,4}_[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$"
+)
 
 
 def _validate_folk_id(value: str, entity: str = "entity") -> None:
@@ -34,6 +36,7 @@ def _validate_folk_id(value: str, entity: str = "entity") -> None:
             f"Folk IDs are prefix + UUID v4 format (e.g., 'per_xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx'). "
             f"Call find_person or find_company first to get the correct ID from the search results."
         )
+
 
 # Configure logging to stderr (stdout is for MCP JSON-RPC)
 logging.basicConfig(
