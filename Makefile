@@ -1,8 +1,8 @@
 # MCPB bundle configuration
 BUNDLE_NAME = mcp-folk
-VERSION ?= 0.1.0
+VERSION ?= 0.0.1
 
-.PHONY: help install dev-install format format-check lint lint-fix typecheck test test-cov clean run check all pack
+.PHONY: help install dev-install format format-check lint lint-fix typecheck test test-cov clean check all bundle bundle-run bump run
 
 help: ## Show this help message
 	@echo 'Usage: make [target]'
@@ -49,25 +49,39 @@ clean: ## Clean up build artifacts and cache
 	find . -type d -name ".mypy_cache" -exec rm -rf {} + 2>/dev/null || true
 	find . -type d -name "build" -exec rm -rf {} + 2>/dev/null || true
 	find . -type d -name "dist" -exec rm -rf {} + 2>/dev/null || true
-	rm -rf *.mcpb
+	rm -rf bundle/ *.mcpb
 
 run: ## Run the MCP server in stdio mode
 	uv run python -m mcp_folk.server
 
-pack: ## Build MCPB bundle for local testing
-	@echo "Vendoring dependencies..."
-	@rm -rf deps/
-	@uv pip install --target ./deps --only-binary :all: . 2>/dev/null || uv pip install --target ./deps .
-	@echo "Packing bundle..."
-	@OS=$$(uname -s | tr '[:upper:]' '[:lower:]'); \
-	ARCH=$$(uname -m); \
-	case "$$ARCH" in x86_64) ARCH="amd64";; esac; \
-	mcpb pack . "$(BUNDLE_NAME)-$(VERSION)-$$OS-$$ARCH.mcpb"
-	@echo "Done! Bundle ready for testing"
-
 check: format-check lint typecheck test ## Run all checks
 
 all: clean install format lint typecheck test ## Clean, install, format, lint, type check, and test
+
+# MCPB bundle commands
+bundle: ## Build MCPB bundle locally
+	@./scripts/build-bundle.sh . $(VERSION)
+
+bundle-run: bundle ## Build and run MCPB bundle locally
+	@echo "Starting bundle with mcpb-python base image..."
+	@python -m http.server 9999 --directory . &
+	@sleep 1
+	docker run --rm \
+		--add-host host.docker.internal:host-gateway \
+		-p 8000:8000 \
+		-e BUNDLE_URL=http://host.docker.internal:9999/$(BUNDLE_NAME)-v$(VERSION).mcpb \
+		ghcr.io/nimblebrain/mcpb-python:3.14
+
+bump: ## Bump version across all files (usage: make bump VERSION=0.2.0)
+	@if [ -z "$(VERSION)" ]; then echo "Usage: make bump VERSION=x.y.z"; exit 1; fi
+	@echo "Bumping version to $(VERSION)..."
+	@jq --arg v "$(VERSION)" '.version = $$v' manifest.json > manifest.tmp.json && mv manifest.tmp.json manifest.json
+	@sed -i '' 's/^version = ".*"/version = "$(VERSION)"/' pyproject.toml
+	@sed -i '' 's/^__version__ = ".*"/__version__ = "$(VERSION)"/' src/mcp_folk/__init__.py
+	@echo "Updated:"
+	@echo "  manifest.json:            $$(jq -r .version manifest.json)"
+	@echo "  pyproject.toml:           $$(grep '^version' pyproject.toml)"
+	@echo "  src/mcp_folk/__init__.py: $$(grep '__version__' src/mcp_folk/__init__.py)"
 
 # Development shortcuts
 fmt: format ## Alias for format

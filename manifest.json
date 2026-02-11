@@ -1,10 +1,15 @@
 {
-  "manifest_version": "0.3",
+  "manifest_version": "0.4",
   "name": "@nimblebraininc/folk",
-  "version": "0.1.6",
+  "version": "0.2.0",
   "description": "Folk CRM server for managing people, companies, notes, and reminders",
   "author": {
-    "name": "NimbleBrain Inc"
+    "name": "NimbleBrain Inc",
+    "email": "hello@nimblebrain.ai"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/NimbleBrainInc/mcp-folk"
   },
   "user_config": {
     "api_key": {
@@ -20,9 +25,106 @@
     "entry_point": "mcp_folk.server",
     "mcp_config": {
       "command": "python",
-      "args": ["-m", "mcp_folk.server"],
+      "args": [
+        "-m",
+        "mcp_folk.server"
+      ],
       "env": {
         "FOLK_API_KEY": "${user_config.api_key}"
+      }
+    }
+  },
+  "tools": [
+    {
+      "name": "find_person",
+      "description": "Find people by name in the CRM"
+    },
+    {
+      "name": "find_company",
+      "description": "Find companies by name in the CRM"
+    },
+    {
+      "name": "get_person_details",
+      "description": "Get full details for a person by their ID"
+    },
+    {
+      "name": "get_company_details",
+      "description": "Get full details for a company by its ID"
+    },
+    {
+      "name": "browse_people",
+      "description": "Browse all people in the CRM with pagination"
+    },
+    {
+      "name": "browse_companies",
+      "description": "Browse all companies in the CRM with pagination"
+    },
+    {
+      "name": "list_groups",
+      "description": "List all groups in the Folk workspace"
+    },
+    {
+      "name": "find_people_in_group",
+      "description": "Find people in a specific group with optional status and custom field filters"
+    },
+    {
+      "name": "find_companies_in_group",
+      "description": "Find companies in a specific group with optional status and custom field filters"
+    },
+    {
+      "name": "add_person",
+      "description": "Add a new person to the CRM"
+    },
+    {
+      "name": "add_company",
+      "description": "Add a new company to the CRM"
+    },
+    {
+      "name": "update_person",
+      "description": "Update fields on an existing person"
+    },
+    {
+      "name": "update_company",
+      "description": "Update fields on an existing company"
+    },
+    {
+      "name": "delete_person",
+      "description": "Delete a person from the CRM"
+    },
+    {
+      "name": "delete_company",
+      "description": "Delete a company from the CRM"
+    },
+    {
+      "name": "add_note",
+      "description": "Add a note to a person"
+    },
+    {
+      "name": "get_notes",
+      "description": "Get notes for a person"
+    },
+    {
+      "name": "set_reminder",
+      "description": "Set a reminder for a person"
+    },
+    {
+      "name": "log_interaction",
+      "description": "Log an interaction with a person"
+    },
+    {
+      "name": "whoami",
+      "description": "Get information about the current authenticated user"
+    }
+  ],
+  "_meta": {
+    "org.mpaktrust": {
+      "mtf_version": "0.1",
+      "permissions": {
+        "filesystem": "none",
+        "network": "outbound",
+        "environment": "read",
+        "subprocess": "none",
+        "native": "none"
       }
     }
   }

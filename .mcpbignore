@@ -25,6 +25,7 @@ build/
 # Dev config
 Makefile
 pytest.ini
+pyproject.toml
 .env
 .env.*
 cspell.json
@@ -32,12 +33,16 @@ cspell.json
 # Lock files
 uv.lock
 
+# Scripts
+scripts/
+
+# Claude Code
+.claude/
+CLAUDE.md
+
 # IDE
 .vscode/
 .idea/
-
-# Docs (not needed in bundle)
-CLAUDE.md
 
 # Images
 *.png
