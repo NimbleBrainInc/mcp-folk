@@ -11,6 +11,7 @@ import logging
 import os
 import re
 import sys
+from importlib.resources import files
 from typing import Any
 
 from fastmcp import Context, FastMCP
@@ -48,7 +49,23 @@ logger = logging.getLogger("mcp_folk")
 logger.info("Folk server module loading...")
 
 # Create MCP server
-mcp = FastMCP("Folk")
+mcp = FastMCP(
+    "Folk",
+    instructions=(
+        "Before using Folk CRM tools, read the skill://folk/usage resource "
+        "for tool routing, ID format rules, and situational handling patterns."
+    ),
+)
+
+
+SKILL_CONTENT = files("mcp_folk").joinpath("SKILL.md").read_text()
+
+
+@mcp.resource("skill://folk/usage")
+def folk_skill() -> str:
+    """How to effectively use Folk CRM tools: ID format, group queries, situational handling."""
+    return SKILL_CONTENT
+
 
 # Global client instance
 _client: FolkClient | None = None

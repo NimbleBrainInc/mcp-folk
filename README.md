@@ -12,6 +12,7 @@ An MCP (Model Context Protocol) server that provides access to [Folk CRM](https:
 - **Contact Management**: Create, update, and delete people and companies
 - **Notes & Reminders**: Attach context to your contacts
 - **Interaction Logging**: Track emails, meetings, and calls
+- **Built-in Skill Resource**: Serves a `skill://folk/usage` resource that teaches LLMs correct tool routing, ID format rules, and situational handling patterns
 
 ## Adding to Claude Code
 
