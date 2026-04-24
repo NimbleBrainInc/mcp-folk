@@ -1,48 +1,56 @@
+# mcpb pack loads this file and treats each pattern as gitignore-style.
+# Gitignore rule that bites: a pattern without a leading `/` matches
+# anywhere in the tree, including inside `deps/` / `node_modules/`.
+# Unanchored `tests/` or `conftest.py` strips vendored runtime modules
+# and breaks imports at bundle startup. Project-only patterns are
+# anchored with `/` below; cross-tree hygiene (`__pycache__`, `*.pyc`,
+# `.DS_Store`) is left unanchored intentionally.
+
 # Development environment (deps/ is created by build action)
-.venv/
-.git/
-.github/
-.pytest_cache/
+/.venv/
+/.git/
+/.github/
+/.pytest_cache/
 __pycache__/
 *.pyc
 
 # Cache directories
-.mypy_cache/
-.ruff_cache/
-.coverage
+/.mypy_cache/
+/.ruff_cache/
+/.coverage
 
 # Test files
-tests/
-tests-integration/
-e2e/
+/tests/
+/tests-integration/
+/e2e/
 
 # Build artifacts
-dist/
-build/
+/dist/
+/build/
 *.egg-info/
 *.mcpb
 
 # Dev config
-Makefile
-pytest.ini
-pyproject.toml
-.env
-.env.*
-cspell.json
+/Makefile
+/pytest.ini
+/pyproject.toml
+/.env
+/.env.*
+/cspell.json
 
 # Lock files
-uv.lock
+/uv.lock
 
 # Scripts
-scripts/
+/scripts/
 
 # Claude Code
-.claude/
-CLAUDE.md
+/.claude/
+/CLAUDE.md
 
 # IDE
-.vscode/
-.idea/
+/.vscode/
+/.idea/
 
 # Images
-*.png
+/*.png
