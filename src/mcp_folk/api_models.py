@@ -1,12 +1,12 @@
 """Pydantic models for Folk API responses."""
 
-from enum import Enum
+from enum import StrEnum
 from typing import Any
 
 from pydantic import BaseModel, Field
 
 
-class EntityType(str, Enum):
+class EntityType(StrEnum):
     """Entity types in Folk."""
 
     PERSON = "person"
@@ -14,7 +14,7 @@ class EntityType(str, Enum):
     OBJECT = "object"
 
 
-class Visibility(str, Enum):
+class Visibility(StrEnum):
     """Visibility options."""
 
     PUBLIC = "public"
