@@ -1,12 +1,13 @@
 {
   "manifest_version": "0.4",
   "name": "@nimblebraininc/folk",
-  "version": "0.3.0",
+  "version": "0.3.1",
   "description": "Folk CRM server for managing people, companies, notes, and reminders",
   "author": {
     "name": "NimbleBrain Inc",
     "email": "hello@nimblebrain.ai"
   },
+  "icon": "https://static.nimblebrain.ai/icons/folk.png",
   "repository": {
     "type": "git",
     "url": "https://github.com/NimbleBrainInc/mcp-folk"
