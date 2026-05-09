@@ -1,6 +1,6 @@
 [project]
 name = "mcp-folk"
-version = "0.3.1"
+version = "0.3.2"
 description = "Folk CRM MCP Server"
 readme = "README.md"
 license = {text = "MIT"}
